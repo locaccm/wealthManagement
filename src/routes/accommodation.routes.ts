@@ -24,6 +24,19 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   try {
+
+    const user = await prisma.user.findUnique({
+      where: { USEN_ID },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.USEC_TYPE !== 'OWNER') {
+      return res.status(403).json({ error: 'Only owners can create accommodations' });
+    }
+
     const accommodation = await prisma.accommodation.create({
       data: {
         ACCC_NAME: ACCC_NAME,
