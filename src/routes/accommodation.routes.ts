@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import prisma from '../prisma/client';
+import { Router, Request, Response } from "express";
+import prisma from "../prisma/client";
 
 const router = Router();
 
@@ -16,25 +16,40 @@ const router = Router();
  * }
  */
 
-router.post('/', async (req: Request, res: Response) => {
-  const {ACCC_NAME, ACCC_TYPE, ACCC_DESC, ACCC_ADDRESS, ACCB_AVAILABLE, USEN_ID } = req.body;
+router.post("/", async (req: Request, res: Response) => {
+  const {
+    ACCC_NAME,
+    ACCC_TYPE,
+    ACCC_DESC,
+    ACCC_ADDRESS,
+    ACCB_AVAILABLE,
+    USEN_ID,
+  } = req.body;
 
-  if (!ACCC_NAME || !ACCC_TYPE || !ACCC_DESC || !ACCC_ADDRESS || ACCB_AVAILABLE === undefined || !USEN_ID) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  if (
+    !ACCC_NAME ||
+    !ACCC_TYPE ||
+    !ACCC_DESC ||
+    !ACCC_ADDRESS ||
+    ACCB_AVAILABLE === undefined ||
+    !USEN_ID
+  ) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
-
     const user = await prisma.user.findUnique({
       where: { USEN_ID },
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.USEC_TYPE !== 'OWNER') {
-      return res.status(403).json({ error: 'Only owners can create accommodations' });
+    if (user.USEC_TYPE !== "OWNER") {
+      return res
+        .status(403)
+        .json({ error: "Only owners can create accommodations" });
     }
 
     const accommodation = await prisma.accommodation.create({
@@ -51,7 +66,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json(accommodation);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error creating accommodation' });
+    res.status(500).json({ error: "Error creating accommodation" });
   }
 });
 
