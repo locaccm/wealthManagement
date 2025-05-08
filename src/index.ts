@@ -6,6 +6,6 @@ const port = process.env.PORT || 3000;
 
 app.disable("x-powered-by");
 app.use(express.json());
-app.use("/Accommodations", accommodationRouter);
+app.use("/accommodations", accommodationRouter);
 
 app.listen(port, () => {});

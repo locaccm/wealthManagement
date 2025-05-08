@@ -4,7 +4,7 @@ import prisma from "../prisma/client";
 const router = Router();
 
 /**
- * POST /Create
+ * POST /create
  * Expected Body :
  * {
  *  ACCC_NAME       = "Accommodation Name"          ex: "My House",
@@ -16,7 +16,7 @@ const router = Router();
  * }
  */
 
-router.post("/Create", async (req: Request, res: Response) => {
+router.post("/create", async (req: Request, res: Response) => {
   const {
     ACCC_NAME,
     ACCC_TYPE,
@@ -71,13 +71,13 @@ router.post("/Create", async (req: Request, res: Response) => {
 });
 
 /**
- * GET /Read
+ * GET /read
  * Query Parameters:
  * - userId: ID of the user (owner) to filter accommodations
  * - available: (optional) filter by availability (true/false)
  */
 
-router.get("/Read", async (req: Request, res: Response) => {
+router.get("/read", async (req: Request, res: Response) => {
   const { userId, available } = req.query;
 
   if (!userId) {
