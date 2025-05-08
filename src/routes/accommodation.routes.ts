@@ -4,7 +4,7 @@ import prisma from "../prisma/client";
 const router = Router();
 
 /**
- * POST /createAccommodations
+ * POST /Create
  * Expected Body :
  * {
  *  ACCC_NAME       = "Accommodation Name"          ex: "My House",
@@ -16,7 +16,7 @@ const router = Router();
  * }
  */
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/Create", async (req: Request, res: Response) => {
   const {
     ACCC_NAME,
     ACCC_TYPE,
@@ -67,6 +67,60 @@ router.post("/", async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error creating accommodation" });
+  }
+});
+
+/**
+ * GET /Read
+ * Query Parameters:
+ * - userId: ID of the user (owner) to filter accommodations
+ * - available: (optional) filter by availability (true/false)
+ */
+
+router.get("/Read", async (req: Request, res: Response) => {
+  const { userId, available } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  if (
+    available !== undefined &&
+    available !== "true" &&
+    available !== "false"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Invalid value for available. Must be true or false." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { USEN_ID: Number(userId) },
+    });
+
+    if (!user) {
+      return res.status(403).json({ error: "Forbidden: User not found" });
+    }
+
+    if (user.USEC_TYPE !== "OWNER") {
+      return res.status(403).json({ error: "Forbidden: Not an OWNER" });
+    }
+
+    const filters: any = { USEN_ID: Number(userId) };
+
+    if (available !== undefined) {
+      filters.ACCB_AVAILABLE = available === "true";
+    }
+
+    const accommodations = await prisma.accommodation.findMany({
+      where: filters,
+    });
+
+    res.status(200).json(accommodations);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
