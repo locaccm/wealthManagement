@@ -126,4 +126,85 @@ router.get("/read", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * DELETE /accommodations/delete/:id
+ * Headers:
+ * - user-id: ID of the user requesting deletion
+ */
+
+router.delete("/delete/:id", async (req: Request, res: Response) => {
+  const accommodationId = Number(req.params.id);
+  const userId = Number(req.header("user-id"));
+
+  if (!userId || isNaN(accommodationId)) {
+    return res
+      .status(400)
+      .json({ error: "Missing or invalid userId/accommodationId" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { USEN_ID: userId },
+    });
+
+    if (!user || user.USEC_TYPE !== "OWNER") {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: Not an OWNER or user not found" });
+    }
+
+    const accommodation = await prisma.accommodation.findUnique({
+      where: { ACCN_ID: accommodationId },
+    });
+
+    if (!accommodation) {
+      return res.status(404).json({ error: "Accommodation not found" });
+    }
+
+    if (accommodation.USEN_ID !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: You do not own this accommodation" });
+    }
+
+    if (!accommodation.ACCB_AVAILABLE) {
+      return res.status(400).json({
+        error: "Accommodation is not available and cannot be deleted",
+      });
+    }
+
+    const activeLease = await prisma.lease.findFirst({
+      where: {
+        ACCN_ID: accommodationId,
+        LEAB_ACTIVE: true,
+      },
+    });
+
+    if (activeLease) {
+      return res
+        .status(400)
+        .json({ error: "Cannot delete accommodation with active lease" });
+    }
+
+    await prisma.event.deleteMany({
+      where: { ACCN_ID: accommodationId },
+    });
+
+    await prisma.lease.deleteMany({
+      where: { ACCN_ID: accommodationId },
+    });
+
+    await prisma.accommodation.delete({
+      where: { ACCN_ID: accommodationId },
+    });
+
+    res
+      .status(200)
+      .json({ message: "Accommodation and related data deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 export default router;
