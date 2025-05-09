@@ -107,7 +107,7 @@ router.get("/read", async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Forbidden: Not an OWNER" });
     }
 
-    const filters: any = { USEN_ID: Number(userId) };
+    const filters: { USEN_ID: number; ACCB_AVAILABLE?: boolean } = { USEN_ID: Number(userId) };
 
     if (available !== undefined) {
       filters.ACCB_AVAILABLE = available === "true";
