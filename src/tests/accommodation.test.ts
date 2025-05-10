@@ -2,6 +2,11 @@ import request from "supertest";
 import express from "express";
 import accommodationRouter from "../routes/accommodation.routes";
 import prisma from "../prisma/client";
+import { validateOwnerAccommodation } from "../utils/validateOwnerAccommodation";
+
+jest.mock("../utils/validateOwnerAccommodation", () => ({
+  validateOwnerAccommodation: jest.fn(),
+}));
 
 jest.mock("../prisma/client", () => ({
   __esModule: true,
@@ -249,137 +254,21 @@ describe("GET /accommodations/read", () => {
 });
 
 describe("DELETE /accommodations/delete/:id", () => {
-  afterEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should return 400 if no user-id header is provided", async () => {
-    const res = await request(app).delete("/accommodations/delete/1");
-
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      error: "Missing or invalid userId/accommodationId",
-    });
-  });
-
-  it("should return 403 if user is not found or not an OWNER", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
-
-    let res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({
-      error: "Forbidden: Not an OWNER or user not found",
-    });
-
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "TENANT",
-    });
-
-    res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({
-      error: "Forbidden: Not an OWNER or user not found",
-    });
-  });
-
-  it("should return 404 if accommodation does not exist", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue(null);
-
-    const res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: "Accommodation not found" });
-  });
-
-  it("should return 403 if user is not the owner", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 2,
-      ACCB_AVAILABLE: true,
-    });
-
-    const res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({
-      error: "Forbidden: You do not own this accommodation",
-    });
-  });
-
-  it("should return 400 if accommodation is not available", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: false,
-    });
-
-    const res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      error: "Accommodation is not available and cannot be deleted",
-    });
-  });
-
-  it("should return 400 if an active lease exists", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: true,
-    });
-    (prisma.lease.findFirst as jest.Mock).mockResolvedValue([
-      { LEAN_ID: 1, LEAB_ACTIVE: true },
-    ]);
-
-    const res = await request(app)
-      .delete("/accommodations/delete/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      error: "Cannot delete accommodation with active lease",
-    });
-  });
-
   it("should delete accommodation and related data", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: true,
+      },
     });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: true,
-    });
+
     (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.event.deleteMany as jest.Mock).mockResolvedValue({});
     (prisma.lease.deleteMany as jest.Mock).mockResolvedValue({});
@@ -395,14 +284,84 @@ describe("DELETE /accommodations/delete/:id", () => {
     });
   });
 
-  it("should handle internal server error if an unexpected error occurs", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
+  it("should return 400 if accommodation is unavailable", async () => {
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1 },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: false,
+      },
     });
-    (prisma.accommodation.findUnique as jest.Mock).mockImplementation(() => {
-      throw new Error("Unexpected DB error");
+
+    const res = await request(app)
+      .delete("/accommodations/delete/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Accommodation is not available and cannot be deleted",
     });
+  });
+
+  it("should return 400 if there is an active lease", async () => {
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1 },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: true,
+      },
+    });
+
+    (prisma.lease.findFirst as jest.Mock).mockResolvedValue({
+      LEAN_ID: 123,
+      LEAB_ACTIVE: true,
+    });
+
+    const res = await request(app)
+      .delete("/accommodations/delete/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Cannot delete accommodation with active lease",
+    });
+  });
+
+  it("should return error if validation fails", async () => {
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 403,
+      error: "Forbidden: Not an OWNER or user not found",
+    });
+
+    const res = await request(app)
+      .delete("/accommodations/delete/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: "Forbidden: Not an OWNER or user not found",
+    });
+  });
+
+  it("should return 500 on unexpected error", async () => {
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1 },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: true,
+      },
+    });
+
+    (prisma.lease.findFirst as jest.Mock).mockRejectedValue(
+      new Error("Unexpected"),
+    );
 
     const res = await request(app)
       .delete("/accommodations/delete/1")
@@ -419,7 +378,14 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 400 if user-id or accommodationId is missing or invalid", async () => {
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 400,
+      error: "Missing or invalid userId/accommodationId",
+    });
+
     const res = await request(app).put("/accommodations/update/abc");
+
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       error: "Missing or invalid userId/accommodationId",
@@ -427,7 +393,11 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 403 if user not found or not an OWNER", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 403,
+      error: "Forbidden: Not an OWNER or user not found",
+    });
 
     const res = await request(app)
       .put("/accommodations/update/1")
@@ -440,11 +410,11 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 404 if accommodation not found", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 404,
+      error: "Accommodation not found",
     });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .put("/accommodations/update/1")
@@ -455,13 +425,10 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 403 if accommodation does not belong to user", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 2,
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 403,
+      error: "Forbidden: You do not own this accommodation",
     });
 
     const res = await request(app)
@@ -475,14 +442,14 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 400 if accommodation is not available", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: false,
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: false,
+      },
     });
 
     const res = await request(app)
@@ -496,15 +463,16 @@ describe("PUT /accommodations/update/:id", () => {
   });
 
   it("should return 400 if active lease exists", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
+      accommodation: {
+        ACCN_ID: 1,
+        USEN_ID: 1,
+        ACCB_AVAILABLE: true,
+      },
     });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: true,
-    });
+
     (prisma.lease.findFirst as jest.Mock).mockResolvedValue({
       LEAB_ACTIVE: true,
     });
@@ -526,16 +494,6 @@ describe("PUT /accommodations/update/:id", () => {
       ACCB_AVAILABLE: true,
     };
 
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue(
-      mockAccommodation,
-    );
-    (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
-
     const updatedFields = {
       ACCC_NAME: "New Name",
       ACCC_TYPE: "New Type",
@@ -543,6 +501,14 @@ describe("PUT /accommodations/update/:id", () => {
       ACCC_DESC: "New Description",
       ACCB_AVAILABLE: false,
     };
+
+    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
+      success: true,
+      user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
+      accommodation: mockAccommodation,
+    });
+
+    (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
 
     (prisma.accommodation.update as jest.Mock).mockResolvedValue({
       ...mockAccommodation,
@@ -564,34 +530,8 @@ describe("PUT /accommodations/update/:id", () => {
     });
   });
 
-  it("should return 200 when accommodation is successfully updated", async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      USEN_ID: 1,
-      USEC_TYPE: "OWNER",
-    });
-    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
-      ACCN_ID: 1,
-      USEN_ID: 1,
-      ACCB_AVAILABLE: true,
-    });
-    (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.accommodation.update as jest.Mock).mockResolvedValue({});
-
-    const res = await request(app)
-      .put("/accommodations/update/1")
-      .set("user-id", "1")
-      .send({ ACCC_NAME: "Updated Name" });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      message: "Accommodation updated successfully",
-      updatedAccommodation: {},
-    });
-    expect(res.status).toBe(200);
-  });
-
   it("should return 500 if an unexpected error occurs", async () => {
-    (prisma.user.findUnique as jest.Mock).mockRejectedValue(
+    (validateOwnerAccommodation as jest.Mock).mockRejectedValue(
       new Error("Unexpected error"),
     );
 

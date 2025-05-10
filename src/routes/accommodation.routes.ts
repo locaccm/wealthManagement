@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import prisma from "../prisma/client";
+import { validateOwnerAccommodation } from "../utils/validateOwnerAccommodation";
 
 const router = Router();
 
@@ -136,36 +137,16 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
   const accommodationId = Number(req.params.id);
   const userId = Number(req.header("user-id"));
 
-  if (!userId || isNaN(accommodationId)) {
-    return res
-      .status(400)
-      .json({ error: "Missing or invalid userId/accommodationId" });
-  }
-
   try {
-    const user = await prisma.user.findUnique({
-      where: { USEN_ID: userId },
-    });
-
-    if (!user || user.USEC_TYPE !== "OWNER") {
-      return res
-        .status(403)
-        .json({ error: "Forbidden: Not an OWNER or user not found" });
+    const validation = await validateOwnerAccommodation(
+      userId,
+      accommodationId,
+    );
+    if (!validation.success) {
+      return res.status(validation.status).json({ error: validation.error });
     }
 
-    const accommodation = await prisma.accommodation.findUnique({
-      where: { ACCN_ID: accommodationId },
-    });
-
-    if (!accommodation) {
-      return res.status(404).json({ error: "Accommodation not found" });
-    }
-
-    if (accommodation.USEN_ID !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Forbidden: You do not own this accommodation" });
-    }
+    const { accommodation } = validation;
 
     if (!accommodation.ACCB_AVAILABLE) {
       return res.status(400).json({
@@ -186,24 +167,16 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
         .json({ error: "Cannot delete accommodation with active lease" });
     }
 
-    await prisma.event.deleteMany({
-      where: { ACCN_ID: accommodationId },
-    });
+    await prisma.event.deleteMany({ where: { ACCN_ID: accommodationId } });
+    await prisma.lease.deleteMany({ where: { ACCN_ID: accommodationId } });
+    await prisma.accommodation.delete({ where: { ACCN_ID: accommodationId } });
 
-    await prisma.lease.deleteMany({
-      where: { ACCN_ID: accommodationId },
-    });
-
-    await prisma.accommodation.delete({
-      where: { ACCN_ID: accommodationId },
-    });
-
-    res
+    return res
       .status(200)
       .json({ message: "Accommodation and related data deleted successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -230,29 +203,18 @@ router.put("/update/:id", async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { USEN_ID: userId },
-    });
+    const validationResult = await validateOwnerAccommodation(
+      userId,
+      accommodationId,
+    );
 
-    if (!user || user.USEC_TYPE !== "OWNER") {
+    if (!validationResult.success) {
       return res
-        .status(403)
-        .json({ error: "Forbidden: Not an OWNER or user not found" });
+        .status(validationResult.status)
+        .json({ error: validationResult.error });
     }
 
-    const accommodation = await prisma.accommodation.findUnique({
-      where: { ACCN_ID: accommodationId },
-    });
-
-    if (!accommodation) {
-      return res.status(404).json({ error: "Accommodation not found" });
-    }
-
-    if (accommodation.USEN_ID !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Forbidden: You do not own this accommodation" });
-    }
+    const { accommodation } = validationResult;
 
     if (!accommodation.ACCB_AVAILABLE) {
       return res.status(400).json({
