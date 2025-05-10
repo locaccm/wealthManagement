@@ -14,6 +14,7 @@ jest.mock("../prisma/client", () => ({
       findMany: jest.fn(),
       findUnique: jest.fn(),
       delete: jest.fn(),
+      update: jest.fn(),
     },
     lease: {
       findMany: jest.fn(),
@@ -262,7 +263,6 @@ describe("DELETE /accommodations/delete/:id", () => {
   });
 
   it("should return 403 if user is not found or not an OWNER", async () => {
-    // Cas 1 : utilisateur non trouvé
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
     let res = await request(app)
@@ -406,6 +406,197 @@ describe("DELETE /accommodations/delete/:id", () => {
 
     const res = await request(app)
       .delete("/accommodations/delete/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: "Internal Server Error" });
+  });
+});
+
+describe("PUT /accommodations/update/:id", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return 400 if user-id or accommodationId is missing or invalid", async () => {
+    const res = await request(app).put("/accommodations/update/abc");
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing or invalid userId/accommodationId",
+    });
+  });
+
+  it("should return 403 if user not found or not an OWNER", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: "Forbidden: Not an OWNER or user not found",
+    });
+  });
+
+  it("should return 404 if accommodation not found", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Accommodation not found" });
+  });
+
+  it("should return 403 if accommodation does not belong to user", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
+      ACCN_ID: 1,
+      USEN_ID: 2,
+    });
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: "Forbidden: You do not own this accommodation",
+    });
+  });
+
+  it("should return 400 if accommodation is not available", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
+      ACCN_ID: 1,
+      USEN_ID: 1,
+      ACCB_AVAILABLE: false,
+    });
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Accommodation is not available and cannot be updated",
+    });
+  });
+
+  it("should return 400 if active lease exists", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
+      ACCN_ID: 1,
+      USEN_ID: 1,
+      ACCB_AVAILABLE: true,
+    });
+    (prisma.lease.findFirst as jest.Mock).mockResolvedValue({
+      LEAB_ACTIVE: true,
+    });
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Cannot update accommodation with active lease",
+    });
+  });
+
+  it("should update all allowed fields of the accommodation", async () => {
+    const mockAccommodation = {
+      ACCN_ID: 1,
+      USEN_ID: 1,
+      ACCB_AVAILABLE: true,
+    };
+
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue(
+      mockAccommodation,
+    );
+    (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
+
+    const updatedFields = {
+      ACCC_NAME: "New Name",
+      ACCC_TYPE: "New Type",
+      ACCC_ADDRESS: "New Address",
+      ACCC_DESC: "New Description",
+      ACCB_AVAILABLE: false,
+    };
+
+    (prisma.accommodation.update as jest.Mock).mockResolvedValue({
+      ...mockAccommodation,
+      ...updatedFields,
+    });
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1")
+      .send(updatedFields);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      message: "Accommodation updated successfully",
+      updatedAccommodation: {
+        ...mockAccommodation,
+        ...updatedFields,
+      },
+    });
+  });
+
+  it("should return 200 when accommodation is successfully updated", async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      USEN_ID: 1,
+      USEC_TYPE: "OWNER",
+    });
+    (prisma.accommodation.findUnique as jest.Mock).mockResolvedValue({
+      ACCN_ID: 1,
+      USEN_ID: 1,
+      ACCB_AVAILABLE: true,
+    });
+    (prisma.lease.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.accommodation.update as jest.Mock).mockResolvedValue({});
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
+      .set("user-id", "1")
+      .send({ ACCC_NAME: "Updated Name" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      message: "Accommodation updated successfully",
+      updatedAccommodation: {},
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("should return 500 if an unexpected error occurs", async () => {
+    (prisma.user.findUnique as jest.Mock).mockRejectedValue(
+      new Error("Unexpected error"),
+    );
+
+    const res = await request(app)
+      .put("/accommodations/update/1")
       .set("user-id", "1");
 
     expect(res.status).toBe(500);
