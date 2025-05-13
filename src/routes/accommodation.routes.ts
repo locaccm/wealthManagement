@@ -129,6 +129,8 @@ router.get("/read", async (req: Request, res: Response) => {
 
 /**
  * DELETE /accommodations/delete/:id
+ * Path Parameters:
+ * - id: ID of the accommodation to delete
  * Headers:
  * - user-id: ID of the user requesting deletion
  */
@@ -182,6 +184,8 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
 
 /**
  * PUT /accommodations/update/:id
+ * Path Parameters:
+ * - id: ID of the accommodation to update
  * Headers:
  * - user-id: ID of the user requesting the update
  * Body:
