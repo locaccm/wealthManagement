@@ -91,7 +91,7 @@ router.get("/read", async (req: Request, res: Response) => {
     available !== "false"
   ) {
     return res
-      .status(401)
+      .status(400)
       .json({ error: "Invalid value for available. Must be true or false." });
   }
 
@@ -101,7 +101,7 @@ router.get("/read", async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "Forbidden: User not found" });
+      return res.status(403).json({ error: "Forbidden: User not found" });
     }
 
     if (user.USEC_TYPE !== "OWNER") {
@@ -129,7 +129,7 @@ router.get("/read", async (req: Request, res: Response) => {
 
 /**
  * DELETE /accommodations/delete/:id
- * Query Parameters:
+ * Path Parameters:
  * - id: ID of the accommodation to delete
  * Headers:
  * - user-id: ID of the user requesting deletion
@@ -151,7 +151,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
     const { accommodation } = validation;
 
     if (!accommodation.ACCB_AVAILABLE) {
-      return res.status(406).json({
+      return res.status(400).json({
         error: "Accommodation is not available and cannot be deleted",
       });
     }
@@ -165,7 +165,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
 
     if (activeLease) {
       return res
-        .status(407)
+        .status(400)
         .json({ error: "Cannot delete accommodation with active lease" });
     }
 
@@ -184,7 +184,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
 
 /**
  * PUT /accommodations/update/:id
- * Query Parameters:
+ * Path Parameters:
  * - id: ID of the accommodation to update
  * Headers:
  * - user-id: ID of the user requesting the update
@@ -221,7 +221,7 @@ router.put("/update/:id", async (req: Request, res: Response) => {
     const { accommodation } = validationResult;
 
     if (!accommodation.ACCB_AVAILABLE) {
-      return res.status(406).json({
+      return res.status(400).json({
         error: "Accommodation is not available and cannot be updated",
       });
     }
@@ -235,7 +235,7 @@ router.put("/update/:id", async (req: Request, res: Response) => {
 
     if (activeLease) {
       return res
-        .status(407)
+        .status(400)
         .json({ error: "Cannot update accommodation with active lease" });
     }
 

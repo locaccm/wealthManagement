@@ -61,13 +61,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/Accommodation'
         '400':
-          description: Missing required fields
-        '401':
-          description: Invalid value for available
+          description: Missing required fields or invalid parameters
         '403':
-          description: Not authorized, only OWNER can view accommodations
-        '404':
-          description: User not found
+          description: User not found or not authorized, only OWNER can view accommodations
         '500':
           description: Internal server error
 
@@ -97,17 +93,11 @@ paths:
         '200':
           description: Accommodation updated
         '400':
-          description: Missing required fields
+          description: Missing required fields or invalid parameters
         '403':
-          description: Not an owner or user not found
+          description: Not an owner or not your accommodation
         '404':
           description: Accommodation not found
-        '405':
-          description: You cannot delete an accommodation that is not yours
-        '406':
-          description: Accommodation is not available
-        '407':
-          description: Accommodation have a active lease
         '500':
           description: Internal server error
 
@@ -133,15 +123,9 @@ paths:
         '400':
           description: Missing required fields
         '403':
-          description: Not an owner or user not found
+          description: Not an owner or not your accommodation
         '404':
           description: Accommodation not found
-        '405':
-          description: You cannot delete an accommodation that is not yours
-        '406':
-          description: Accommodation is not available
-        '407':
-          description: Accommodation have a active lease
         '500':
           description: Internal server error
 
