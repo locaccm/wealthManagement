@@ -42,7 +42,7 @@ export async function validateOwnerAccommodation(
   if (accommodation.USEN_ID !== userId) {
     return {
       success: false,
-      status: 403,
+      status: 405,
       error: "Forbidden: You do not own this accommodation",
     };
   }
