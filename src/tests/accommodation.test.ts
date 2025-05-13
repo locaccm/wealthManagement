@@ -153,23 +153,23 @@ describe("GET /accommodations/read", () => {
     expect(res.body).toEqual({ error: "Missing userId" });
   });
 
-  it("should return 400 if available is invalid", async () => {
+  it("should return 401 if available is invalid", async () => {
     const res = await request(app)
       .get("/accommodations/read")
       .query({ userId: 1, available: "maybe" });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     expect(res.body).toEqual({
       error: "Invalid value for available. Must be true or false.",
     });
   });
 
-  it("should return 403 if user is not found", async () => {
+  it("should return 404 if user is not found", async () => {
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get("/accommodations/read")
       .query({ userId: 999 });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Forbidden: User not found" });
   });
 
@@ -284,7 +284,7 @@ describe("DELETE /accommodations/delete/:id", () => {
     });
   });
 
-  it("should return 400 if accommodation is unavailable", async () => {
+  it("should return 406 if accommodation is unavailable", async () => {
     (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
       success: true,
       user: { USEN_ID: 1 },
@@ -299,13 +299,13 @@ describe("DELETE /accommodations/delete/:id", () => {
       .delete("/accommodations/delete/1")
       .set("user-id", "1");
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(406);
     expect(res.body).toEqual({
       error: "Accommodation is not available and cannot be deleted",
     });
   });
 
-  it("should return 400 if there is an active lease", async () => {
+  it("should return 407 if there is an active lease", async () => {
     (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
       success: true,
       user: { USEN_ID: 1 },
@@ -325,7 +325,7 @@ describe("DELETE /accommodations/delete/:id", () => {
       .delete("/accommodations/delete/1")
       .set("user-id", "1");
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(407);
     expect(res.body).toEqual({
       error: "Cannot delete accommodation with active lease",
     });
@@ -441,7 +441,7 @@ describe("PUT /accommodations/update/:id", () => {
     });
   });
 
-  it("should return 400 if accommodation is not available", async () => {
+  it("should return 406 if accommodation is not available", async () => {
     (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
       success: true,
       user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
@@ -456,13 +456,13 @@ describe("PUT /accommodations/update/:id", () => {
       .put("/accommodations/update/1")
       .set("user-id", "1");
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(406);
     expect(res.body).toEqual({
       error: "Accommodation is not available and cannot be updated",
     });
   });
 
-  it("should return 400 if active lease exists", async () => {
+  it("should return 407 if active lease exists", async () => {
     (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
       success: true,
       user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
@@ -481,7 +481,7 @@ describe("PUT /accommodations/update/:id", () => {
       .put("/accommodations/update/1")
       .set("user-id", "1");
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(407);
     expect(res.body).toEqual({
       error: "Cannot update accommodation with active lease",
     });
