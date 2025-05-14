@@ -1,7 +1,10 @@
 {
   "scripts": {
-    "test": "jest --coverage --coverageReporters=lcov"
-  },
+    "test": "jest --coverage --coverageReporters=lcov",
+    "migrate": "npx prisma migrate deploy --schema=src/prisma/prisma/schema.prisma",
+    "generate": "npx prisma generate --schema=src/prisma/prisma/schema.prisma",
+    "build": "tsc",
+    "start": "npm run generate && node dist/index.js"  },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@types/body-parser": "^1.19.5",
