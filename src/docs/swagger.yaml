@@ -1,0 +1,187 @@
+openapi: 3.0.0
+info:
+  title: Accommodation Microservice API
+  version: 1.0.0
+  description: RESTful API for wealth management (create, read, update, delete)
+
+servers:
+  - url: http://localhost:3000
+
+tags:
+  - name: Accommodations
+    description: Endpoints linked to housing
+
+paths:
+  /accommodations/create:
+    post:
+      tags:
+        - Accommodations
+      summary: Create a new accommodation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccommodationInput'
+      responses:
+        '201':
+          description: accommodation created
+        '400':
+          description: Missing required fields
+        '403':
+          description: Not authorized, only OWNER can create accommodations
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+
+  /accommodations/read:
+    get:
+      tags:
+        - Accommodations
+      summary: Retrieve all accommodations for the connected user (OWNER) 
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: available
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of accommodations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Accommodation'
+        '400':
+          description: Missing required fields or invalid parameters
+        '403':
+          description: User not found or not authorized, only OWNER can view accommodations
+        '500':
+          description: Internal server error
+
+  /accommodations/update/{id}:
+    put:
+      tags:
+        - Accommodations
+      summary: update an accommodation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccommodationUpdate'
+      responses:
+        '200':
+          description: Accommodation updated
+        '400':
+          description: Missing required fields or invalid parameters
+        '403':
+          description: Not an owner or not your accommodation
+        '404':
+          description: Accommodation not found
+        '500':
+          description: Internal server error
+
+  /accommodations/delete/{id}:
+    delete:
+      tags:
+        - Accommodations
+      summary: Delete an accommodation and all its associated data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Accommodation and related data deleted
+        '400':
+          description: Missing required fields
+        '403':
+          description: Not an owner or not your accommodation
+        '404':
+          description: Accommodation not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    AccommodationInput:
+      type: object
+      required:
+        - ACCC_NAME
+        - ACCC_TYPE
+        - ACCC_ADDRESS
+        - ACCC_DESC
+        - ACCB_AVAILABLE
+        - USEN_ID
+      properties:
+        ACCC_NAME:
+          type: string
+        ACCC_TYPE:
+          type: string
+        ACCC_ADDRESS:
+          type: string
+        ACCC_DESC:
+          type: string
+        ACCB_AVAILABLE:
+          type: boolean
+        USEN_ID:
+          type: integer
+
+    AccommodationUpdate:
+      type: object
+      properties:
+        ACCC_NAME:
+          type: string
+        ACCC_TYPE:
+          type: string
+        ACCC_ADDRESS:
+          type: string
+        ACCC_DESC:
+          type: string
+        ACCB_AVAILABLE:
+          type: boolean
+
+    Accommodation:
+      type: object
+      properties:
+        ACCN_ID:
+          type: integer
+        ACCC_NAME:
+          type: string
+        ACCC_TYPE:
+          type: string
+        ACCC_DESC:
+          type: string
+        ACCC_ADDRESS:
+          type: string
+        ACCB_AVAILABLE:
+          type: boolean
+        USEN_ID:
+          type: integer
