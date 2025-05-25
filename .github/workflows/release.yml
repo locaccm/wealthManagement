@@ -1,4 +1,4 @@
-name: Release documentManagement
+name: Release wealthmanagement
 
 on:
   push:
