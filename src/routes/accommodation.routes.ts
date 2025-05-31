@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../prisma/client";
 import { validateOwnerAccommodation } from "../utils/validateOwnerAccommodation";
+import { checkAccess } from "../middlewares/checkAcces";
 
 const router = Router();
 
@@ -15,9 +16,10 @@ const router = Router();
  *  ACCB_AVAILABLE  = "Accommodation Availability"  ex: true / false,
  *  USEN_ID         = "Accommodation Owner ID"      ex: 1,
  * }
+ * Token must be in Authorization header.
  */
 
-router.post("/create", async (req: Request, res: Response) => {
+router.post("/create", checkAccess("setHouse"), async (req: Request, res: Response) => {
   const {
     ACCC_NAME,
     ACCC_TYPE,
@@ -78,7 +80,7 @@ router.post("/create", async (req: Request, res: Response) => {
  * - available: (optional) filter by availability (true/false)
  */
 
-router.get("/read", async (req: Request, res: Response) => {
+router.get("/read", checkAccess("getHouse"), async (req: Request, res: Response) => {
   const { userId, available } = req.query;
 
   if (!userId) {
@@ -135,7 +137,7 @@ router.get("/read", async (req: Request, res: Response) => {
  * - user-id: ID of the user requesting deletion
  */
 
-router.delete("/delete/:id", async (req: Request, res: Response) => {
+router.delete("/delete/:id", checkAccess("deleteHouse"), async (req: Request, res: Response) => {
   const accommodationId = Number(req.params.id);
   const userId = Number(req.header("user-id"));
 
@@ -196,7 +198,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
  * - ACCB_AVAILABLE: true (optional)
  */
 
-router.put("/update/:id", async (req: Request, res: Response) => {
+router.put("/update/:id", checkAccess("updateHouse"), async (req: Request, res: Response) => {
   const accommodationId = Number(req.params.id);
   const userId = Number(req.header("user-id"));
 
