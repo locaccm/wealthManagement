@@ -8,7 +8,7 @@ export const checkAccess = (rightName: string) => {
     next: NextFunction,
   ): Promise<void> => {
     const authServiceUrl = process.env.AUTH_SERVICE_URL;
-    
+
     if (!authServiceUrl) {
       return next();
     }
@@ -26,7 +26,7 @@ export const checkAccess = (rightName: string) => {
     try {
       const response = await axios.post(
         `${process.env.AUTH_SERVICE_URL}/access/check`,
-                {
+        {
           token,
           rightName,
         },
