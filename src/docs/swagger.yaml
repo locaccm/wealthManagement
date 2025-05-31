@@ -17,6 +17,8 @@ paths:
       tags:
         - Accommodations
       summary: Create a new accommodation
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -40,6 +42,8 @@ paths:
       tags:
         - Accommodations
       summary: Retrieve all accommodations for the connected user (OWNER) 
+      security:
+        - bearerAuth: []
       parameters:
         - name: userId
           in: query
@@ -72,6 +76,8 @@ paths:
       tags:
         - Accommodations
       summary: update an accommodation
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -106,6 +112,8 @@ paths:
       tags:
         - Accommodations
       summary: Delete an accommodation and all its associated data
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -185,3 +193,9 @@ components:
           type: boolean
         USEN_ID:
           type: integer
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
