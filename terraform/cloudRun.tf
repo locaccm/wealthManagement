@@ -11,6 +11,9 @@ module "cloud_run_wealthmanagement-service" {
   env_variables = {
     NODE_ENV = "production"
   }
+  secrets = {
+    DATABASE_URL = "DATABASE_URL_PROD"
+  }
 }
 
 module "cloud_run_wealthmanagement-service_invokers" {

@@ -24,6 +24,18 @@ resource "google_cloud_run_service" "service" {
             value = env.value
           }
         }
+        dynamic "env" {
+          for_each = var.secrets
+          content {
+            name = env.key
+            value_from {
+              secret_key_ref {
+                name = env.value
+                key  = "latest"
+              }
+            }
+          }
+        }
       }
 
       service_account_name = var.service_account_email

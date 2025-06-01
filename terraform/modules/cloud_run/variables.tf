@@ -39,3 +39,7 @@ variable "env_variables" {
   default     = {}
   description = "Environment variables to inject into the container"
 }
+variable "secrets" {
+  type    = map(string)
+  default = {}
+}
