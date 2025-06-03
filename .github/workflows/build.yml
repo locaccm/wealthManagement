@@ -85,10 +85,10 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            -t authentication:latest .
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL_PRE_PROD }} \
+            -t wealthmanagement-service:latest .
 
       - name: Tag & Push to Artifact Registry
         run: |
-          docker tag authentication:latest europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/authentication:latest
-          docker push europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/authentication:latest
+          docker tag wealthmanagement-service:latest europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/wealthmanagement-service:latest
+          docker push europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/wealthmanagement-service:latest
