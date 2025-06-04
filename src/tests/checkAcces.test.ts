@@ -45,9 +45,9 @@ describe("checkAccess middleware", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("should call next() if token is valid and response is 201", async () => {
+  it("should call next() if token is valid and response is 200", async () => {
     req.headers = { authorization: "Bearer validtoken" };
-    mockedAxios.post.mockResolvedValueOnce({ status: 201 });
+    mockedAxios.post.mockResolvedValueOnce({ status: 200 });
 
     const middleware = checkAccess("accommodation:create");
     await middleware(req as Request, res as Response, next);
