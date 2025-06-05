@@ -441,27 +441,6 @@ describe("PUT /accommodations/update/:id", () => {
     });
   });
 
-  it("should return 400 if accommodation is not available", async () => {
-    (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
-      success: true,
-      user: { USEN_ID: 1, USEC_TYPE: "OWNER" },
-      accommodation: {
-        ACCN_ID: 1,
-        USEN_ID: 1,
-        ACCB_AVAILABLE: false,
-      },
-    });
-
-    const res = await request(app)
-      .put("/accommodations/update/1")
-      .set("user-id", "1");
-
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      error: "Accommodation is not available and cannot be updated",
-    });
-  });
-
   it("should return 400 if active lease exists", async () => {
     (validateOwnerAccommodation as jest.Mock).mockResolvedValue({
       success: true,

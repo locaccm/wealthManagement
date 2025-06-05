@@ -237,14 +237,6 @@ router.put(
           .json({ error: validationResult.error });
       }
 
-      const { accommodation } = validationResult;
-
-      if (!accommodation.ACCB_AVAILABLE) {
-        return res.status(400).json({
-          error: "Accommodation is not available and cannot be updated",
-        });
-      }
-
       const activeLease = await prisma.lease.findFirst({
         where: {
           ACCN_ID: accommodationId,
