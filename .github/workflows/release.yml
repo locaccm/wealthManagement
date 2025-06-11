@@ -1,0 +1,46 @@
+name: Release wealthmanagement
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Google Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_CD }}
+          project_id: intricate-pad-455413-f7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init
+
+      - name: Terraform Import (if resources already exist)
+        run: |
+          terraform -chdir=terraform import -input=false -no-color \
+            module.service_account_wealthmanagement-service.google_service_account.this \
+            projects/intricate-pad-455413-f7/serviceAccounts/wealthmanagement-service@intricate-pad-455413-f7.iam.gserviceaccount.com || true
+
+          terraform -chdir=terraform import -input=false -no-color \
+            module.vpc_connector.google_vpc_access_connector.this \
+            projects/intricate-pad-455413-f7/locations/europe-west1/connectors/locaccm-vpc-connector || true
+
+          terraform -chdir=terraform import -input=false -no-color \
+            module.cloud_run_wealthmanagement-service.google_cloud_run_service.service \
+            locations/europe-west1/namespaces/intricate-pad-455413-f7/services/wealthmanagement-service || true
+
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -auto-approve
