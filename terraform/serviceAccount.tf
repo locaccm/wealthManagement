@@ -5,6 +5,7 @@ module "service_account_wealthmanagement-service" {
   project_id   = "intricate-pad-455413-f7"
   roles        = [
     "roles/cloudsql.client",
-    "roles/secretmanager.secretAccessor"
+    "roles/secretmanager.secretAccessor",
+    "roles/artifactregistry.reader"
   ]
 }
