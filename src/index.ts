@@ -10,7 +10,14 @@ const swaggerDocument = YAML.load("src/docs/swagger.yaml");
 
 app.disable("x-powered-by");
 app.use(express.json());
-app.use(cors()); //NOSONAR
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    allowedHeaders: "Content-Type,Authorization,user-id",
+    credentials: true,
+  }),
+); //NOSONAR
 app.use("/accommodations", accommodationRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
