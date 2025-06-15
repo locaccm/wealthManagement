@@ -1,0 +1,96 @@
+name: Build
+on:
+  push:
+    branches:
+      - develop
+      - epic/**
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for better analysis
+          submodules: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.13.1  
+
+      - name: Install dependencies
+        run: npm install 
+
+      - name: Generate Prisma Client 
+        run: npx prisma generate --schema=src/prisma/prisma/schema.prisma  
+
+      - name: Set Database URL
+        run: echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Verify DATABASE_URL
+        run: echo "DATABASE_URL is set to $DATABASE_URL"
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run test -- --coverage --coverageReporters=lcov
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  eslint:
+    name: ESLint Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.13.1
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint
+        run: npx eslint .
+
+  docker-build:
+    name: Docker Build and Push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+        
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          project_id: intricate-pad-455413-f7
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker europe-west1-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL_PRE_PROD }} \
+            -t wealthmanagement-service:latest .
+
+      - name: Tag & Push to Artifact Registry
+        run: |
+          docker tag wealthmanagement-service:latest europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/wealthmanagement-service:latest
+          docker push europe-west1-docker.pkg.dev/intricate-pad-455413-f7/locaccm-repo-docker/wealthmanagement-service:latest
