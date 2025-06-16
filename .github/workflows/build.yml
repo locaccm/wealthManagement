@@ -88,6 +88,8 @@ jobs:
         run: |
           docker build \
             --build-arg DATABASE_URL=${{ secrets.DATABASE_URL_PRE_PROD }} \
+            --build-arg CORS_ORIGIN=${{ secrets.CORS_ORIGIN }} \
+            --build-arg AUTH_SERVICE_URL=${{ secrets.AUTH_SERVICE_URL }} \
             -t wealthmanagement-service:latest .
 
       - name: Tag & Push to Artifact Registry
